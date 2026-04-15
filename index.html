@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate Bird Gallery</title>
+
+<style>
+:root {
+    --accent:#4169E1;
+    --bg:#080808;
+}
+
+body {
+    background:var(--bg);
+    color:#fff;
+    font-family:sans-serif;
+    padding:40px;
+}
+
+h2 { text-align:center; }
+
+.filters, .search-box, .upload-box {
+    text-align:center;
+    margin:15px;
+}
+
+button {
+    padding:10px 18px;
+    margin:5px;
+    background:#111;
+    color:#fff;
+    border:1px solid #333;
+    cursor:pointer;
+}
+
+button:hover { background:var(--accent); }
+
+input { 
+    padding:8px; 
+    background:#111;
+    border:1px solid #333;
+    color:#fff;
+}
+
+.gallery {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+}
+
+.item {
+    position:relative;
+    height:300px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.1);
+}
+
+.item img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    transition:0.5s;
+}
+
+.item:hover img { transform:scale(1.1); }
+
+.like {
+    position:absolute;
+    top:10px;
+    right:10px;
+    font-size:20px;
+    cursor:pointer;
+}
+
+.preview {
+    position:fixed;
+    top:0;left:0;
+    width:100%;height:100%;
+    background:rgba(0,0,0,0.95);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.preview img {
+    max-width:90%;
+}
+
+@media(max-width:800px){ .gallery{grid-template-columns:1fr 1fr;} }
+@media(max-width:500px){ .gallery{grid-template-columns:1fr;} }
+</style>
+</head>
+
+<body>
+
+<h2>🦅 Ultimate Gallery</h2>
+
+<div class="filters">
+<button onclick="loadCategory('birds')">🦜 Birds</button>
+<button onclick="loadCategory('nature')">🌿 Nature</button>
+<button onclick="loadCategory('tech')">💻 Tech</button>
+<button onclick="startSlideshow()">▶ Slideshow</button>
+</div>
+
+<div class="search-box">
+<input type="text" id="search" placeholder="Search..." oninput="searchImages()">
+</div>
+
+<div class="upload-box">
+<input type="file" id="file">
+<button onclick="addImage()">Upload</button>
+</div>
+
+<div class="gallery" id="gallery"></div>
+
+<script>
+
+let currentCategory="birds";
+
+const data={
+    birds:[
+        "https://images.unsplash.com/photo-1520638023360-6def4335941b?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1444464666168-49d633b867ad?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1480044965905-02098d419e96?auto=format&fit=crop&w=1200&q=80"
+    ],
+    nature:[
+        "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80"
+    ],
+    tech:[
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80"
+    ]
+};
+
+function loadCategory(cat){
+    currentCategory=cat;
+    let images=JSON.parse(localStorage.getItem(cat));
+
+    if(!images || images.length < data[cat].length){
+        localStorage.setItem(cat,JSON.stringify(data[cat]));
+        images=data[cat];
+    }
+
+    display(images);
+}
+
+function display(images){
+    const g=document.getElementById("gallery");
+    g.innerHTML="";
+
+    images.forEach(src=>{
+        const div=document.createElement("div");
+        div.className="item";
+
+        div.innerHTML=`
+            <img src="${src}">
+            <div class="like">🤍</div>
+        `;
+
+        const img=div.querySelector("img");
+        const like=div.querySelector(".like");
+
+        // ✅ Broken image fix
+        img.onerror = () => {
+            div.remove();
+            removeImage(src);
+        };
+
+        img.onclick=(e)=>{ 
+            e.stopPropagation(); 
+            preview(src); 
+        };
+
+        let liked=false;
+        like.onclick=(e)=>{ 
+            e.stopPropagation(); 
+            liked=!liked; 
+            like.textContent=liked?"❤️":"🤍"; 
+        };
+
+        div.oncontextmenu=(e)=>{
+            e.preventDefault();
+            if(confirm("Delete image?")){
+                div.remove();
+                removeImage(src);
+            }
+        };
+
+        g.appendChild(div);
+    });
+}
+
+function addImage(){
+    const f=document.getElementById("file").files[0];
+    if(!f) return;
+
+    const r=new FileReader();
+    r.onload=e=>{
+        let arr=JSON.parse(localStorage.getItem(currentCategory))||[];
+        arr.push(e.target.result);
+        localStorage.setItem(currentCategory,JSON.stringify(arr));
+        loadCategory(currentCategory);
+    };
+    r.readAsDataURL(f);
+}
+
+function removeImage(src){
+    let arr=JSON.parse(localStorage.getItem(currentCategory))||[];
+    arr=arr.filter(i=>i!==src);
+    localStorage.setItem(currentCategory,JSON.stringify(arr));
+}
+
+function preview(src){
+    const p=document.createElement("div");
+    p.className="preview";
+    p.innerHTML = `<img src="${src}">`;
+    p.onclick=()=>p.remove();
+    document.body.appendChild(p);
+}
+
+function searchImages(){
+    const val=document.getElementById("search").value.toLowerCase();
+    let arr=JSON.parse(localStorage.getItem(currentCategory))||[];
+    arr=arr.filter(i=>i.toLowerCase().includes(val));
+    display(arr);
+}
+
+function startSlideshow(){
+    let arr=JSON.parse(localStorage.getItem(currentCategory))||[];
+    if(arr.length===0) return;
+
+    let i=0;
+    const p=document.createElement("div");
+    p.className="preview";
+    const img=document.createElement("img");
+    p.appendChild(img);
+    document.body.appendChild(p);
+
+    function show(){
+        if(i>=arr.length) i=0;
+        img.src=arr[i];
+        i++;
+    }
+
+    show();
+    const interval=setInterval(show,2000);
+
+    p.onclick=()=>{
+        clearInterval(interval);
+        p.remove();
+    };
+}
+
+window.onload=()=>loadCategory("birds");
+
+</script>
+</body>
+</html>
