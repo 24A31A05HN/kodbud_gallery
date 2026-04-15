@@ -165,8 +165,7 @@ function display(images){
 
         // ✅ Broken image fix
         img.onerror = () => {
-            div.remove();
-            removeImage(src);
+              img.src = "https://via.placeholder.com/300x300?text=Image+Not+Found";
         };
 
         img.onclick=(e)=>{ 
